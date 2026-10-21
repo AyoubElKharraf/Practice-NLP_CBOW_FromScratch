@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environnements virtuels
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+
+# Outils de packaging et de test
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+
+# Éditeurs et systèmes d'exploitation
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Journaux et fichiers temporaires
+*.log
+*.tmp
+*.temp
+
+# Artefacts générés par l'entraînement
+checkpoints/
+models/
+*.npy
+*.npz
+*.pkl
+*.pickle
