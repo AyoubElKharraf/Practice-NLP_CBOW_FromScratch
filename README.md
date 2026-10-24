@@ -29,8 +29,8 @@ Le modèle final reposera sur les composants suivants :
 | Étape | Description | Statut | Fichiers prévus |
 | :---: | :--- | :---: | :--- |
 | **1** | Prétraitement, tokenisation et vocabulaire | **Terminé** | `corpus.py`, `tokenizer.py`, `vocabulary.py`, `main.py` |
-| **2** | Génération des exemples `contexte -> cible` | À venir | `dataset.py` |
-| **3** | Embeddings et architecture du modèle | À venir | `model.py` |
+| **2** | Génération des exemples `contexte -> cible` | **Terminé** | `dataset.py`, `main.py` |
+| **3** | Embeddings et architecture du modèle | **Terminé** | `embedding.py`, `model.py`, `main.py` |
 | **4** | Forward pass, loss et backpropagation | À venir | `train.py` |
 | **5** | Inférence, prédiction et évaluation | À venir | `predict.py`, `main.py` |
 
@@ -85,57 +85,82 @@ Orchestre l'étape 1 et affiche :
 - un exemple d'encodage/décodage ;
 - un exemple de remplacement d'un mot par `<MASK>`.
 
-## Vision des prochaines étapes
+## Étape 2 : génération des données CBOW / MLM
 
-### Étape 2 - Création des données CBOW/MLM
-
-Pour chaque phrase, une fenêtre glissante sera utilisée afin de créer des
-exemples de la forme :
+Cette étape est terminée. Le fichier `dataset.py` transforme chaque phrase
+tokenisée en exemples d'entraînement simples :
 
 ```text
-contexte : ["le", "chat", "sur", "tapis"]
+phrase   : ["le", "chat", "dort", "sur", "le", "tapis"]
+contexte : ["le", "chat", "sur", "le"]
 cible    : "dort"
 ```
 
-Le mot cible pourra également être remplacé par `<MASK>` dans la séquence
-d'entrée.
+La taille de la fenêtre est configurable. Avec `taille_fenetre=2`, deux mots
+à gauche et deux mots à droite sont recherchés. Quand une position sort de la
+phrase, elle est remplacée par `<PAD>`, ce qui donne des contextes de longueur
+identique.
 
-### Étape 3 - Embeddings et modèle
+Le module fournit trois fonctions faciles à suivre :
 
-Une matrice d'embeddings sera initialisée aléatoirement :
+- `construire_contexte(...)` : récupère les mots voisins d'une cible ;
+- `generer_exemples(...)` : crée les couples contexte/cible et la phrase avec
+  `<MASK>` ;
+- `convertir_exemples_en_indices(...)` : prépare les données numériques pour
+  le futur modèle.
 
-```text
-E : V x d
+Chaque exemple contient :
+
+```python
+{
+    "contexte": ["le", "chat", "sur", "le"],
+    "cible": "dort",
+    "phrase_masquee": ["le", "chat", "<MASK>", "sur", "le", "tapis"]
+}
 ```
 
-Les embeddings des mots du contexte seront ensuite additionnés ou moyennés
-pour obtenir un vecteur de contexte de dimension `d`.
+La démonstration de cette étape est disponible dans `main.py`.
 
-### Étape 4 - Forward, loss et backpropagation
+## Étape 3 : Embeddings et architecture du modèle
 
-Le modèle calculera :
+Cette étape est terminée. Elle met en place la structure du réseau de neurones en séparant la gestion des plongements lexicaux et l'architecture globale du modèle :
 
+### Modules disponibles
+
+#### `embedding.py` (`CoucheEmbedding`)
+- initialise la matrice des embeddings $E \in \mathbb{R}^{V \times d}$ avec l'initialisation uniforme de Xavier/Glorot ($[-\frac{1}{\sqrt{d}}, +\frac{1}{\sqrt{d}}]$) ;
+- fixe le vecteur du token spécial `<PAD>` à zéro ;
+- fournit `obtenir_vecteur(indice)` et `obtenir_vecteurs(indices)` ;
+- propose `agreger_contexte(indices_contexte, mode="moyenne")` pour condenser les $K$ vecteurs de mots voisins en un unique vecteur de contexte $h \in \mathbb{R}^d$ (en ignorant le padding pour préserver le sens).
+
+#### `model.py` (`ModeleCBOW`)
+- intègre la `CoucheEmbedding` ;
+- initialise les poids de la couche linéaire de sortie $W_{\text{sortie}} \in \mathbb{R}^{d \times V}$ et le vecteur de biais $b_{\text{sortie}} \in \mathbb{R}^V$ ;
+- implémente la fonction `softmax` avec stabilisation numérique ($z - \max(z)$) pour éviter tout risque de dépassement de capacité (*overflow*) ;
+- fournit la méthode `forward(indices_contexte)` calculant :
+  1. $h = \text{moyenne}(E[\text{contexte}])$
+  2. $z = h \cdot W_{\text{sortie}} + b_{\text{sortie}}$ (scores / logits)
+  3. $p = \text{softmax}(z)$ (distribution de probabilités sur les $V$ mots)
+- fournit `predire_top_k(indices_contexte, k=5)` pour extraire directement les candidats les plus probables.
+
+#### `main.py` (Section 6)
+- instancie le modèle avec la taille réelle du vocabulaire ($V = 1617$) et $d = 32$ ;
+- teste et affiche la passe avant (*forward pass*) sur un exemple concret extrait du corpus.
+
+## Vision des prochaines étapes
+
+Les étapes 1, 2 et 3 étant terminées, les prochaines étapes sont :
+
+### Étape 4 - Forward pass, loss et backpropagation (`train.py`)
+Le modèle calculera la perte d'entropie croisée (*cross-entropy loss*) entre les probabilités prédites et le mot cible :
 ```text
-vecteur_contexte = moyenne(embeddings_du_contexte)
-scores = vecteur_contexte @ poids_de_sortie
-probabilités = softmax(scores)
+perte = -log(p[indice_cible])
 ```
+Les gradients par rapport à $W_{\text{sortie}}$, $b_{\text{sortie}}$ et aux embeddings des mots du contexte seront dérivés manuellement et appliqués par descente de gradient stochastique (SGD).
 
-La perte sera calculée à partir du mot cible. Les gradients seront dérivés
-et appliqués manuellement avec la descente de gradient :
-
-```text
-W_nouveau = W_actuel - taux_apprentissage * gradient
-```
-
-### Étape 5 - Prédiction et évaluation
-
-Le modèle sera utilisé pour :
-
-- prédire le mot masqué ;
-- afficher les meilleurs candidats et leurs probabilités ;
-- mesurer la précision sur des exemples de test ;
-- comparer les prédictions du modèle avec les mots réels.
+### Étape 5 - Inférence, prédiction et évaluation (`predict.py`)
+- prédiction interactive de mots masqués (`<MASK>`) sur des phrases fournies par l'utilisateur ;
+- évaluation quantitative de la précision (Accuracy Top-1 et Top-5) sur le jeu de données.
 
 ## Installation et exécution
 
@@ -163,13 +188,16 @@ MiniBERT-CBOW-FromScratch/
 ├── corpus_gutenberg.txt
 ├── tokenizer.py
 ├── vocabulary.py
+├── dataset.py
+├── embedding.py
+├── model.py
 ├── main.py
 ├── README.md
 └── .gitignore
 ```
 
-Les fichiers `dataset.py`, `model.py`, `train.py` et `predict.py` seront
-ajoutés au fur et à mesure de l'avancement.
+Les fichiers `train.py` et `predict.py` seront ajoutés au fur et à
+mesure de l'avancement.
 
 ## Contraintes pédagogiques
 

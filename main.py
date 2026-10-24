@@ -1,16 +1,19 @@
 """
 Point d'entrée principal : main.py
 ----------------------------------
-Étape 1 : Prétraitement, Tokenisation et Vocabulaire (From Scratch en Python)
+Étapes 1, 2 et 3 : Prétraitement, données CBOW/MLM et architecture du modèle
 
 Pipeline :
 1. Chargement du corpus brut (depuis corpus.py).
 2. Nettoyage et tokenisation (depuis tokenizer.py).
 3. Construction du vocabulaire et des dictionnaires de mapping (depuis vocabulary.py).
 4. Affichage complet et démonstration de l'encodage/décodage numérique.
+5. Génération des exemples contexte -> cible pour l'entraînement (depuis dataset.py).
+6. Initialisation des embeddings et du modèle CBOW / MiniBERT (depuis embedding.py et model.py).
 """
 
 import sys
+import numpy as np
 
 # Assure le rendu correct des caractères accentués sous Windows
 if sys.stdout.encoding.lower() != "utf-8":
@@ -19,7 +22,9 @@ if sys.stdout.encoding.lower() != "utf-8":
     except AttributeError:
         pass
 
-from corpus import phrases, obtenir_corpus
+from corpus import phrases
+from dataset import convertir_exemples_en_indices, generer_exemples
+from model import ModeleCBOW
 from tokenizer import tokeniser_corpus, nettoyer_et_tokeniser
 from vocabulary import (
     construire_vocabulaire, 
@@ -105,6 +110,73 @@ def main():
         print(f"Mot original masqué à la position {position_a_masquer} : '{mot_cible}'")
         print(f"Tokens avec masque : {tokens_masques}")
         print(f"Indices numériques avec {TOKEN_MASK} : {indices_masques}")
+
+    # -------------------------------------------------------------
+    # 5. Génération des exemples CBOW / MLM
+    # -------------------------------------------------------------
+    afficher_separateur("5. GÉNÉRATION DES DONNÉES CONTEXTE -> CIBLE")
+    exemples = generer_exemples(corpus_tokenise, taille_fenetre=2)
+    exemples_indices = convertir_exemples_en_indices(
+        exemples, mot_vers_indice
+    )
+    print(f"Nombre total d'exemples créés : {len(exemples)}")
+    print("\n[Exemples texte] :")
+    for exemple in exemples[:3]:
+        print(f"  Contexte : {exemple['contexte']}")
+        print(f"  Cible : {exemple['cible']}")
+        print(f"  Phrase masquée : {exemple['phrase_masquee']}")
+        print()
+
+    print("[Premier exemple converti en indices] :")
+    print(f"  {exemples_indices[0]}")
+
+    # -------------------------------------------------------------
+    # 6. Étape 3 : Embeddings et Modèle CBOW / MiniBERT
+    # -------------------------------------------------------------
+    afficher_separateur("6. ÉTAPE 3 : EMBEDDINGS ET ARCHITECTURE DU MODÈLE")
+    d = 32  # Dimension des embeddings
+    modele = ModeleCBOW(
+        taille_vocabulaire=V,
+        dimension_embedding=d,
+        indice_pad=mot_vers_indice["<PAD>"]
+    )
+
+    print("Modèle initialisé avec succès :")
+    print(f"  - Taille du vocabulaire (V)   : {V}")
+    print(f"  - Dimension des embeddings (d) : {d}")
+    print(f"  - Matrice des embeddings (E)  : {modele.couche_embedding.poids.shape} (V x d)")
+    print(f"  - Matrice de sortie (W_sortie) : {modele.W_sortie.shape} (d x V)")
+    print(f"  - Biais de sortie (b_sortie)   : {modele.b_sortie.shape} (V,)")
+
+    # Test du Forward Pass sur le premier exemple généré
+    premier_ex = exemples_indices[0]
+    contexte_indices = premier_ex["contexte"]
+    cible_indice = premier_ex["cible"]
+    mot_cible_texte = indice_vers_mot[cible_indice]
+    mots_contexte = [indice_vers_mot[idx] for idx in contexte_indices]
+
+    print("\n[Démonstration du Forward Pass sur un exemple réel] :")
+    print(f"  Contexte (mots)    : {mots_contexte}")
+    print(f"  Contexte (indices) : {contexte_indices}")
+    print(f"  Cible attendue     : '{mot_cible_texte}' (indice {cible_indice})")
+
+    # Passe avant
+    sortie = modele.forward(contexte_indices)
+    h = sortie["vecteur_contexte"]
+    scores = sortie["scores"]
+    probabilites = sortie["probabilites"]
+
+    print(f"\n  1. Vecteur contexte agrégé h (taille {len(h)}) :")
+    print(f"     {np.round(h[:5], 3)} ... (aperçu des 5 premières dimensions)")
+    print(f"  2. Scores bruts z (taille {len(scores)}) :")
+    print(f"     {np.round(scores[:5], 3)} ... (aperçu)")
+    print(f"  3. Probabilités Softmax (taille {len(probabilites)}) :")
+    print(f"     Somme des probabilités = {np.sum(probabilites):.4f}")
+
+    top3 = modele.predire_top_k(contexte_indices, k=3)
+    print("\n  Top 3 des prédictions (modèle non encore entraîné) :")
+    for rang, (idx, prob) in enumerate(top3, start=1):
+        print(f"     {rang}. '{indice_vers_mot[idx]}' (indice {idx}) avec probabilité {prob*100:.2f}%")
 
 if __name__ == "__main__":
     main()

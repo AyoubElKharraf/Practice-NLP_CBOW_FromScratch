@@ -10,9 +10,9 @@ Rôle : Création du vocabulaire unique et gestion des correspondances mots <-> 
 
 from typing import Iterable
 
-TOKEN_PAD = "<PAD>"
-TOKEN_UNK = "<UNK>"
-TOKEN_MASK = "<MASK>"
+TOKEN_PAD = "<PAD>" # Token de remplissage pour les séquences de longueur variable (padding).
+TOKEN_UNK = "<UNK>" # Token pour les mots inconnus (hors vocabulaire).
+TOKEN_MASK = "<MASK>" # Token pour les mots masqués (utilisé dans les approches de type CBOW / BERT).
 
 def extraire_vocabulaire_unique(corpus_tokenise: list[list[str]]) -> list[str]:
     """
