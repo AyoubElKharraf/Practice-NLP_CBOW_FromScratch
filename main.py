@@ -38,6 +38,21 @@ def afficher_separateur(titre: str):
     print(f"  {titre}")
     print("=" * 70)
 
+def demander_entier_utilisateur(message: str, valeur_defaut: int = 2) -> int:
+    """
+    Demande un entier à l'utilisateur (ex: taille de fenêtre).
+    Si l'utilisateur appuie directement sur Entrée (ou si non interactif),
+    utilise la valeur par défaut.
+    """
+    try:
+        saisie = input(f"{message} [défaut={valeur_defaut}] : ").strip()
+        if not saisie:
+            return valeur_defaut
+        val = int(saisie)
+        return val if val >= 0 else valeur_defaut
+    except (ValueError, EOFError):
+        return valeur_defaut
+
 def main():
     # -------------------------------------------------------------
     # 1. Chargement du corpus brut
@@ -115,7 +130,15 @@ def main():
     # 5. Génération des exemples CBOW / MLM
     # -------------------------------------------------------------
     afficher_separateur("5. GÉNÉRATION DES DONNÉES CONTEXTE -> CIBLE")
-    exemples = generer_exemples(corpus_tokenise, taille_fenetre=2)
+    print("Configuration de la fenêtre de contexte (choix utilisateur) :")
+    fenetre_avant = demander_entier_utilisateur("  Nombre de mots AVANT la cible", valeur_defaut=2)
+    fenetre_apres = demander_entier_utilisateur("  Nombre de mots APRÈS la cible", valeur_defaut=2)
+    print(f"\n-> Fenêtre retenue : {fenetre_avant} mot(s) avant et {fenetre_apres} mot(s) après.")
+    print(f"-> Taille totale du contexte pour chaque mot : {fenetre_avant + fenetre_apres} mots.\n")
+
+    exemples = generer_exemples(
+        corpus_tokenise, fenetre_avant=fenetre_avant, fenetre_apres=fenetre_apres
+    )
     exemples_indices = convertir_exemples_en_indices(
         exemples, mot_vers_indice
     )

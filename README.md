@@ -96,10 +96,11 @@ contexte : ["le", "chat", "sur", "le"]
 cible    : "dort"
 ```
 
-La taille de la fenêtre est configurable. Avec `taille_fenetre=2`, deux mots
-à gauche et deux mots à droite sont recherchés. Quand une position sort de la
-phrase, elle est remplacée par `<PAD>`, ce qui donne des contextes de longueur
-identique.
+La taille de la fenêtre est désormais paramétrable par l'utilisateur :
+on peut choisir séparément le nombre de mots avant (`fenetre_avant`)
+et après (`fenetre_apres`), avec une valeur par défaut de 2.
+Quand une position sort de la phrase, elle est remplacée par `<PAD>`, ce qui donne
+des contextes de longueur constante (`fenetre_avant + fenetre_apres`).
 
 Le module fournit trois fonctions faciles à suivre :
 
