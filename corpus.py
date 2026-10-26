@@ -2,10 +2,12 @@
 Module corpus.py
 ----------------
 Rôle : Téléchargement et mise à disposition du corpus de texte brut en français.
-Fournit le dataset Gutenberg (500 phrases) ainsi qu'un mini-corpus d'exemple simple.
+Fournit le dataset Gutenberg (500 phrases complètes découpées par ponctuation)
+ainsi qu'un mini-corpus d'exemple simple.
 """
 
 import os
+import re
 import urllib.request
 
 # Mini-corpus statique de secours (utile pour les tests rapides et le débogage)
@@ -20,10 +22,49 @@ MINI_CORPUS_TEST = [
     "Les étoiles brillent dans le ciel calme et dégagé."
 ]
 
+
+def decouper_en_phrases(texte_brut: str, n_phrases: int = 500) -> list[str]:
+    """
+    Découpe un texte brut en véritables phrases grammaticales complètes.
+    
+    1. Élimine l'en-tête Gutenberg en anglais pour démarrer au début du roman en français.
+    2. Remplace les retours à la ligne (\n) et tabulations par des espaces pour reconstituer
+       les phrases réparties sur plusieurs lignes.
+    3. Découpe selon les signes de ponctuation forte de fin de phrase : '.', '!' et '?'.
+    4. Filtre les fragments trop courts (< 15 caractères) pour ne garder que des phrases significatives.
+    """
+    texte = texte_brut
+
+    # 1. Élimination des métadonnées anglaises de Gutenberg si présentes
+    if "*** START OF THE PROJECT" in texte:
+        parties = texte.split("*** START OF THE PROJECT", 1)[1]
+        # Début effectif du roman de Jules Verne
+        if "Le 24 mai 1863" in parties:
+            texte = "Le 24 mai 1863" + parties.split("Le 24 mai 1863", 1)[1]
+        else:
+            texte = parties
+
+    if "*** END OF THE PROJECT" in texte:
+        texte = texte.split("*** END OF THE PROJECT", 1)[0]
+
+    # 2. Reconstitution du texte continu : remplacement des sauts de ligne par un espace
+    texte_continu = re.sub(r"\s+", " ", texte)
+
+    # 3. Découpage sur la ponctuation de fin de phrase (. ! ?)
+    phrases_brutes = re.split(r"[.!?]+", texte_continu)
+
+    # 4. Nettoyage des espaces et filtrage des phrases courtes
+    phrases_valides = [
+        p.strip() for p in phrases_brutes if len(p.strip()) > 15
+    ][:n_phrases]
+
+    return phrases_valides
+
+
 def charger_corpus_gutenberg(n_phrases: int = 500, fichier_cache: str = "corpus_gutenberg.txt") -> list[str]:
     """
     Télécharge ou charge depuis le cache le texte du Projet Gutenberg
-    (roman en français) et le découpe en phrases simples.
+    (roman en français de Jules Verne) et le découpe en phrases complètes.
     """
     texte_brut = ""
     
@@ -42,14 +83,10 @@ def charger_corpus_gutenberg(n_phrases: int = 500, fichier_cache: str = "corpus_
                 f.write(texte_brut)
         except Exception as e:
             print(f"[Attention] Impossible de télécharger depuis Gutenberg ({e}). Utilisation du mini-corpus de test.")
-            return MINI_CORPUS_TEST
+            return MINI_CORPUS_TEST.copy()
 
-    # Découpage en phrases / lignes non vides (> 10 caractères)
-    phrases = [
-        p.strip() for p in texte_brut.split("\n") if len(p.strip()) > 10
-    ][:n_phrases]
+    return decouper_en_phrases(texte_brut, n_phrases=n_phrases)
 
-    return phrases
 
 def obtenir_corpus(source: str = "gutenberg", n_phrases: int = 500) -> list[str]:
     """
@@ -59,10 +96,13 @@ def obtenir_corpus(source: str = "gutenberg", n_phrases: int = 500) -> list[str]
         return MINI_CORPUS_TEST.copy()
     return charger_corpus_gutenberg(n_phrases=n_phrases)
 
+
 # Variable exportée par défaut contenant le corpus
 phrases = obtenir_corpus(source="gutenberg", n_phrases=500)
 
+
 if __name__ == "__main__":
     print(f"Nombre de phrases chargées : {len(phrases)}")
-    print("Exemple de phrase :", phrases[0] if phrases else "Aucune")
-
+    print("\n[Aperçu des 3 premières phrases] :")
+    for i, p in enumerate(phrases[:3], start=1):
+        print(f"  {i}. {p}")

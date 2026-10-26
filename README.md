@@ -52,7 +52,9 @@ Cette étape est terminée. Elle fournit le pipeline de préparation des donnée
 
 #### `corpus.py`
 
-- charge jusqu'à 500 phrases depuis le Projet Gutenberg ;
+- élimine les métadonnées anglaises d'en-tête pour démarrer au début du roman en français ;
+- reconstitue le texte continu en fusionnant les lignes coupées par des retours à la ligne ;
+- découpe le texte en véritables phrases grammaticales complètes via la ponctuation (`[.!?]+`) ;
 - utilise `corpus_gutenberg.txt` comme cache local ;
 - propose un mini-corpus français intégré pour les tests rapides ;
 - expose `obtenir_corpus(source="gutenberg" | "mini")`.
