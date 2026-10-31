@@ -31,7 +31,7 @@ Le modèle final reposera sur les composants suivants :
 | **1** | Prétraitement, tokenisation et vocabulaire | **Terminé** | `corpus.py`, `tokenizer.py`, `vocabulary.py`, `main.py` |
 | **2** | Génération des exemples `contexte -> cible` | **Terminé** | `dataset.py`, `main.py` |
 | **3** | Embeddings et architecture du modèle | **Terminé** | `embedding.py`, `model.py`, `main.py` |
-| **4** | Forward pass, loss et backpropagation | À venir | `train.py` |
+| **4** | Forward pass, loss et backpropagation | **En cours** | `train.py` |
 | **5** | Inférence, prédiction et évaluation | À venir | `predict.py`, `main.py` |
 
 Chaque nouvelle étape sera ajoutée au projet et marquée comme terminée dans
@@ -150,16 +150,27 @@ Cette étape est terminée. Elle met en place la structure du réseau de neurone
 - instancie le modèle avec la taille réelle du vocabulaire ($V = 1617$) et $d = 32$ ;
 - teste et affiche la passe avant (*forward pass*) sur un exemple concret extrait du corpus.
 
-## Vision des prochaines étapes
+## Étape 4 : entraînement, perte et rétropropagation
 
-Les étapes 1, 2 et 3 étant terminées, les prochaines étapes sont :
+Cette étape ajoute `train.py`, qui entraîne le modèle sans framework de Deep Learning :
 
-### Étape 4 - Forward pass, loss et backpropagation (`train.py`)
-Le modèle calculera la perte d'entropie croisée (*cross-entropy loss*) entre les probabilités prédites et le mot cible :
-```text
-perte = -log(p[indice_cible])
+- `calculer_perte(...)` calcule l'entropie croisée : `-log(p[indice_cible])` ;
+- `entrainer_exemple(...)` calcule manuellement les gradients de la sortie et des embeddings du contexte, puis applique une mise à jour SGD ;
+- `entrainer_modele(...)` parcourt les exemples plusieurs fois et affiche la perte moyenne à chaque epoch.
+
+Exemple d'utilisation après la préparation des exemples et la création de `modele` :
+
+```python
+from train import entrainer_modele
+
+pertes = entrainer_modele(modele, exemples_indices, epochs=5, taux_apprentissage=0.05)
 ```
-Les gradients par rapport à $W_{\text{sortie}}$, $b_{\text{sortie}}$ et aux embeddings des mots du contexte seront dérivés manuellement et appliqués par descente de gradient stochastique (SGD).
+
+Le vecteur `<PAD>` reste nul et n'est pas mis à jour. La perte affichée pour chaque epoch est calculée avant la mise à jour de chaque exemple.
+
+## Vision de la prochaine étape
+
+La prochaine étape est l'inférence, la prédiction et l'évaluation.
 
 ### Étape 5 - Inférence, prédiction et évaluation (`predict.py`)
 - prédiction interactive de mots masqués (`<MASK>`) sur des phrases fournies par l'utilisateur ;
@@ -194,13 +205,13 @@ MiniBERT-CBOW-FromScratch/
 ├── dataset.py
 ├── embedding.py
 ├── model.py
+├── train.py
 ├── main.py
 ├── README.md
 └── .gitignore
 ```
 
-Les fichiers `train.py` et `predict.py` seront ajoutés au fur et à
-mesure de l'avancement.
+Le fichier `train.py` contient l'entraînement manuel. `predict.py` sera ajouté lors de la prochaine étape.
 
 ## Contraintes pédagogiques
 
