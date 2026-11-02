@@ -32,7 +32,7 @@ Le modèle final reposera sur les composants suivants :
 | **2** | Génération des exemples `contexte -> cible` | **Terminé** | `dataset.py`, `main.py` |
 | **3** | Embeddings et architecture du modèle | **Terminé** | `embedding.py`, `model.py`, `main.py` |
 | **4** | Forward pass, loss et backpropagation | **En cours** | `train.py` |
-| **5** | Inférence, prédiction et évaluation | À venir | `predict.py`, `main.py` |
+| **5** | Inférence, prédiction et évaluation | **En cours** | `predict.py`, `main.py` |
 
 Chaque nouvelle étape sera ajoutée au projet et marquée comme terminée dans
 ce tableau après validation.
@@ -168,21 +168,37 @@ pertes = entrainer_modele(modele, exemples_indices, epochs=5, taux_apprentissage
 
 Le vecteur `<PAD>` reste nul et n'est pas mis à jour. La perte affichée pour chaque epoch est calculée avant la mise à jour de chaque exemple.
 
-## Vision de la prochaine étape
+## Étape 5 : inférence, prédiction et évaluation
 
-La prochaine étape est l'inférence, la prédiction et l'évaluation.
+Le fichier `predict.py` utilise le modèle entraîné pour :
 
-### Étape 5 - Inférence, prédiction et évaluation (`predict.py`)
-- prédiction interactive de mots masqués (`<MASK>`) sur des phrases fournies par l'utilisateur ;
-- évaluation quantitative de la précision (Accuracy Top-1 et Top-5) sur le jeu de données.
+- construire les indices du contexte autour d'un unique `<MASK>` ;
+- proposer les mots les plus probables sans afficher les tokens spéciaux ;
+- calculer les précisions Top-1 et Top-5 sur une liste d'exemples encodés ;
+- demander des phrases masquées en mode interactif.
+
+Après avoir préparé `modele`, `mot_vers_indice`, `indice_vers_mot` et `exemples_indices` comme dans les étapes précédentes, on peut appeler :
+
+```python
+from predict import evaluer_modele, mode_interactif, predire_mot_masque
+
+print(predire_mot_masque(
+    modele, "le chat <MASK> sur le tapis", mot_vers_indice, indice_vers_mot
+))
+print(evaluer_modele(modele, exemples_indices))
+mode_interactif(modele, mot_vers_indice, indice_vers_mot)
+```
+
+Les précisions sont retournées sous forme de proportions entre `0.0` et `1.0`. Pour mesurer la généralisation, il faut fournir à `evaluer_modele` des exemples gardés à part de ceux utilisés pour l'entraînement.
 
 ## Installation et exécution
 
 Python 3.10 ou une version plus récente est recommandé.
 
-L'étape actuelle peut être exécutée sans dépendance externe :
+Les calculs utilisent NumPy, sans framework de Deep Learning. Installez NumPy dans l'interpréteur Python du projet si nécessaire :
 
 ```bash
+python -m pip install numpy
 python main.py
 ```
 
@@ -206,12 +222,13 @@ MiniBERT-CBOW-FromScratch/
 ├── embedding.py
 ├── model.py
 ├── train.py
+├── predict.py
 ├── main.py
 ├── README.md
 └── .gitignore
 ```
 
-Le fichier `train.py` contient l'entraînement manuel. `predict.py` sera ajouté lors de la prochaine étape.
+`train.py` contient l'entraînement manuel et `predict.py` l'inférence et l'évaluation.
 
 ## Contraintes pédagogiques
 
