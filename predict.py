@@ -120,7 +120,11 @@ def mode_interactif(
     """Demande des phrases contenant <MASK> et affiche les mots candidats."""
     print(f"Entrez une phrase avec {TOKEN_MASK} (Entrée vide pour quitter).")
     while True:
-        phrase = input("Phrase : ").strip()
+        try:
+            phrase = input("Phrase : ").strip()
+        except EOFError:
+            print()
+            break
         if not phrase:
             break
 

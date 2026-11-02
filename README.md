@@ -31,8 +31,8 @@ Le modèle final reposera sur les composants suivants :
 | **1** | Prétraitement, tokenisation et vocabulaire | **Terminé** | `corpus.py`, `tokenizer.py`, `vocabulary.py`, `main.py` |
 | **2** | Génération des exemples `contexte -> cible` | **Terminé** | `dataset.py`, `main.py` |
 | **3** | Embeddings et architecture du modèle | **Terminé** | `embedding.py`, `model.py`, `main.py` |
-| **4** | Forward pass, loss et backpropagation | **En cours** | `train.py` |
-| **5** | Inférence, prédiction et évaluation | **En cours** | `predict.py`, `main.py` |
+| **4** | Forward pass, loss et backpropagation | **Terminé** | `train.py`, `main.py` |
+| **5** | Inférence, prédiction et évaluation | **Terminé** | `predict.py`, `main.py` |
 
 Chaque nouvelle étape sera ajoutée au projet et marquée comme terminée dans
 ce tableau après validation.
@@ -181,15 +181,19 @@ Après avoir préparé `modele`, `mot_vers_indice`, `indice_vers_mot` et `exempl
 
 ```python
 from predict import evaluer_modele, mode_interactif, predire_mot_masque
+from train import entrainer_modele
 
+entrainer_modele(modele, exemples_indices, epochs=5)
 print(predire_mot_masque(
     modele, "le chat <MASK> sur le tapis", mot_vers_indice, indice_vers_mot
 ))
-print(evaluer_modele(modele, exemples_indices))
+print(evaluer_modele(modele, exemples_test_indices))
 mode_interactif(modele, mot_vers_indice, indice_vers_mot)
 ```
 
 Les précisions sont retournées sous forme de proportions entre `0.0` et `1.0`. Pour mesurer la généralisation, il faut fournir à `evaluer_modele` des exemples gardés à part de ceux utilisés pour l'entraînement.
+
+`main.py` orchestre maintenant tout ce parcours : il sépare les phrases en groupes d'entraînement et d'évaluation, entraîne le modèle (5 epochs par défaut), affiche les précisions sur les phrases d'évaluation, puis lance la saisie interactive. Le nombre d'epochs peut être choisi au démarrage. Le modèle est réinitialisé et réentraîné à chaque lancement ; ses poids ne sont pas encore sauvegardés sur disque.
 
 ## Installation et exécution
 

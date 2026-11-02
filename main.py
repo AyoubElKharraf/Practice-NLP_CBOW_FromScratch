@@ -1,7 +1,7 @@
 """
 Point d'entrée principal : main.py
 ----------------------------------
-Étapes 1, 2 et 3 : Prétraitement, données CBOW/MLM et architecture du modèle
+Pipeline complet : préparation, entraînement, évaluation et prédiction CBOW
 
 Pipeline :
 1. Chargement du corpus brut (depuis corpus.py).
@@ -9,7 +9,8 @@ Pipeline :
 3. Construction du vocabulaire et des dictionnaires de mapping (depuis vocabulary.py).
 4. Affichage complet et démonstration de l'encodage/décodage numérique.
 5. Génération des exemples contexte -> cible pour l'entraînement (depuis dataset.py).
-6. Initialisation des embeddings et du modèle CBOW / MiniBERT (depuis embedding.py et model.py).
+6. Initialisation du modèle, entraînement et évaluation (depuis model.py et train.py).
+7. Prédiction interactive d'un mot masqué (depuis predict.py).
 """
 
 import sys
@@ -25,7 +26,9 @@ if sys.stdout.encoding.lower() != "utf-8":
 from corpus import phrases
 from dataset import convertir_exemples_en_indices, generer_exemples
 from model import ModeleCBOW
+from predict import evaluer_modele, mode_interactif
 from tokenizer import tokeniser_corpus, nettoyer_et_tokeniser
+from train import entrainer_modele
 from vocabulary import (
     construire_vocabulaire, 
     tokens_vers_indices, 
@@ -54,6 +57,8 @@ def demander_entier_utilisateur(message: str, valeur_defaut: int = 2) -> int:
         return valeur_defaut
 
 def main():
+    np.random.seed(42)
+
     # -------------------------------------------------------------
     # 1. Chargement du corpus brut
     # -------------------------------------------------------------
@@ -136,15 +141,41 @@ def main():
     print(f"\n-> Fenêtre retenue : {fenetre_avant} mot(s) avant et {fenetre_apres} mot(s) après.")
     print(f"-> Taille totale du contexte pour chaque mot : {fenetre_avant + fenetre_apres} mots.\n")
 
-    exemples = generer_exemples(
-        corpus_tokenise, fenetre_avant=fenetre_avant, fenetre_apres=fenetre_apres
+    # Séparation par phrases pour évaluer sur des phrases non vues à l'entraînement.
+    if len(corpus_tokenise) > 1:
+        ordre_phrases = np.random.permutation(len(corpus_tokenise))
+        nombre_test = max(1, int(len(corpus_tokenise) * 0.2))
+        indices_test = set(ordre_phrases[:nombre_test])
+        phrases_entrainement = [
+            phrase for i, phrase in enumerate(corpus_tokenise) if i not in indices_test
+        ]
+        phrases_test = [
+            phrase for i, phrase in enumerate(corpus_tokenise) if i in indices_test
+        ]
+    else:
+        # Avec une seule phrase, il est impossible de former deux groupes distincts.
+        phrases_entrainement = corpus_tokenise
+        phrases_test = corpus_tokenise
+        print("[Attention] Une seule phrase : l'évaluation réutilisera les données d'entraînement.")
+
+    exemples_entrainement = generer_exemples(
+        phrases_entrainement, fenetre_avant=fenetre_avant, fenetre_apres=fenetre_apres
+    )
+    exemples_test = generer_exemples(
+        phrases_test, fenetre_avant=fenetre_avant, fenetre_apres=fenetre_apres
     )
     exemples_indices = convertir_exemples_en_indices(
-        exemples, mot_vers_indice
+        exemples_entrainement, mot_vers_indice
     )
-    print(f"Nombre total d'exemples créés : {len(exemples)}")
+    exemples_test_indices = convertir_exemples_en_indices(
+        exemples_test, mot_vers_indice
+    )
+    print(f"Phrases d'entraînement : {len(phrases_entrainement)}")
+    print(f"Phrases d'évaluation : {len(phrases_test)}")
+    print(f"Exemples d'entraînement créés : {len(exemples_indices)}")
+    print(f"Exemples d'évaluation créés : {len(exemples_test_indices)}")
     print("\n[Exemples texte] :")
-    for exemple in exemples[:3]:
+    for exemple in exemples_entrainement[:3]:
         print(f"  Contexte : {exemple['contexte']}")
         print(f"  Cible : {exemple['cible']}")
         print(f"  Phrase masquée : {exemple['phrase_masquee']}")
@@ -200,6 +231,33 @@ def main():
     print("\n  Top 3 des prédictions (modèle non encore entraîné) :")
     for rang, (idx, prob) in enumerate(top3, start=1):
         print(f"     {rang}. '{indice_vers_mot[idx]}' (indice {idx}) avec probabilité {prob*100:.2f}%")
+
+    # -------------------------------------------------------------
+    # 7. Étape 4 : entraînement et rétropropagation
+    # -------------------------------------------------------------
+    afficher_separateur("7. ÉTAPE 4 : ENTRAÎNEMENT DU MODÈLE")
+    epochs = demander_entier_utilisateur("Nombre d'epochs d'entraînement", valeur_defaut=5)
+    if epochs < 1:
+        epochs = 5
+    print(f"Entraînement sur {len(exemples_indices)} exemples pendant {epochs} epoch(s).")
+    entrainer_modele(modele, exemples_indices, epochs=epochs, taux_apprentissage=0.05)
+
+    # -------------------------------------------------------------
+    # 8. Étape 5 : évaluation et prédiction interactive
+    # -------------------------------------------------------------
+    afficher_separateur("8. ÉTAPE 5 : ÉVALUATION ET PRÉDICTION")
+    precisions = evaluer_modele(modele, exemples_test_indices, k=5)
+    print(f"Accuracy Top-1 : {precisions['accuracy_top1'] * 100:.2f} %")
+    print(f"Accuracy Top-5 : {precisions['accuracy_top5'] * 100:.2f} %")
+    print("\nLa phrase d'évaluation est distincte de celles utilisées pour l'entraînement.")
+
+    mode_interactif(
+        modele,
+        mot_vers_indice,
+        indice_vers_mot,
+        fenetre_avant=fenetre_avant,
+        fenetre_apres=fenetre_apres,
+    )
 
 if __name__ == "__main__":
     main()
