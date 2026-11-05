@@ -122,7 +122,7 @@ def mode_interactif(
     while True:
         try:
             phrase = input("Phrase : ").strip()
-        except EOFError:
+        except (EOFError, KeyboardInterrupt):
             print()
             break
         if not phrase:

@@ -66,7 +66,8 @@ class CoucheEmbedding:
         ignorer_pad: bool = True
     ) -> np.ndarray:
         """
-        Agrège les embeddings des mots du contexte pour produire un vecteur unique h de taille (d,).
+        Agrège les embeddings des mots du contexte pour produire un vecteur 
+        unique h de taille (d,).
         
         Paramètres :
             indices_contexte (list[int]) : Indices des mots du contexte.
