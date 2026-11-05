@@ -55,6 +55,7 @@ Cette étape est terminée. Elle fournit le pipeline de préparation des donnée
 - élimine les métadonnées anglaises d'en-tête pour démarrer au début du roman en français ;
 - reconstitue le texte continu en fusionnant les lignes coupées par des retours à la ligne ;
 - découpe le texte en véritables phrases grammaticales complètes via la ponctuation (`[.!?]+`) ;
+- charge jusqu'à 5 000 phrases par défaut (les 4 269 phrases disponibles actuellement) ;
 - utilise `corpus_gutenberg.txt` comme cache local ;
 - propose un mini-corpus français intégré pour les tests rapides ;
 - expose `obtenir_corpus(source="gutenberg" | "mini")`.

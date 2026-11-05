@@ -70,7 +70,7 @@ def decouper_en_paragraphes(texte_brut: str, n_paragraphes: int | None = None) -
     return paragraphes
 
 
-def decouper_en_phrases(texte_brut: str, n_phrases: int = 500) -> list[str]:
+def decouper_en_phrases(texte_brut: str, n_phrases: int = 5000) -> list[str]:
     """
     Découpe le texte brut en véritables phrases grammaticales complètes.
     
@@ -114,13 +114,13 @@ def charger_texte_brut(fichier_cache: str = "corpus_gutenberg.txt") -> str:
         return "\n\n\n".join(MINI_CORPUS_TEST)
 
 
-def charger_corpus_gutenberg(n_phrases: int = 500, fichier_cache: str = "corpus_gutenberg.txt") -> list[str]:
+def charger_corpus_gutenberg(n_phrases: int = 5000, fichier_cache: str = "corpus_gutenberg.txt") -> list[str]:
     """Retourne les phrases découpées pour l'entraînement CBOW/MLM."""
     texte_brut = charger_texte_brut(fichier_cache=fichier_cache)
     return decouper_en_phrases(texte_brut, n_phrases=n_phrases)
 
 
-def obtenir_corpus(source: str = "gutenberg", n_phrases: int = 500) -> list[str]:
+def obtenir_corpus(source: str = "gutenberg", n_phrases: int = 5000) -> list[str]:
     """Retourne les phrases du corpus sélectionné ('gutenberg' ou 'mini')."""
     if source == "mini":
         return MINI_CORPUS_TEST.copy()
@@ -136,7 +136,7 @@ def obtenir_paragraphes(source: str = "gutenberg", n_paragraphes: int | None = N
 
 
 # Variable exportée par défaut contenant les phrases pour le modèle CBOW
-phrases = obtenir_corpus(source="gutenberg", n_phrases=500)
+phrases = obtenir_corpus(source="gutenberg", n_phrases=5000)
 
 
 if __name__ == "__main__":
