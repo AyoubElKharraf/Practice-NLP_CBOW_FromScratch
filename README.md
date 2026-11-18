@@ -148,7 +148,7 @@ Cette étape est terminée. Elle met en place la structure du réseau de neurone
 - fournit `predire_top_k(indices_contexte, k=5)` pour extraire directement les candidats les plus probables.
 
 #### `main.py` (Section 6)
-- instancie le modèle avec la taille réelle du vocabulaire ($V = 1617$) et $d = 32$ ;
+- instancie le modèle avec la taille réelle du vocabulaire filtré (environ 2 800 mots fréquents) et $d = 32$ ;
 - teste et affiche la passe avant (*forward pass*) sur un exemple concret extrait du corpus.
 
 ## Étape 4 : entraînement, perte et rétropropagation
@@ -164,7 +164,14 @@ Exemple d'utilisation après la préparation des exemples et la création de `mo
 ```python
 from train import entrainer_modele
 
-pertes = entrainer_modele(modele, exemples_indices, epochs=5, taux_apprentissage=0.05)
+pertes = entrainer_modele(
+    modele,
+    exemples_indices,
+    epochs=5,
+    taux_apprentissage=0.001,
+    exemples_validation=exemples_test_indices,
+    patience=3,
+)
 ```
 
 Le vecteur `<PAD>` reste nul et n'est pas mis à jour. La perte affichée pour chaque epoch est calculée avant la mise à jour de chaque exemple.
@@ -234,6 +241,18 @@ MiniBERT-CBOW-FromScratch/
 ```
 
 `train.py` contient l'entraînement manuel et `predict.py` l'inférence et l'évaluation.
+
+## Améliorations du modèle
+
+La version actuelle utilise aussi les améliorations suivantes :
+
+- `vocabulary.py` accepte `min_count=3` et remplace les mots rares par `<UNK>` ;
+- les vecteurs du contexte sont concaténés dans leur ordre réel ;
+- les embeddings ont une dimension de 32 et sont suivis d'une couche cachée ReLU de 128 neurones ;
+- un dropout de 30 % est appliqué pendant l'entraînement ;
+- `train.py` utilise Adam avec un taux d'apprentissage de `0.001` ;
+- l'entraînement peut s'arrêter automatiquement grâce à la perte de validation ;
+- les exemples `<UNK>` sont ignorés dans l'entraînement et dans les scores Top-1/Top-5.
 
 ## Contraintes pédagogiques
 

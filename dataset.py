@@ -8,7 +8,7 @@ Les positions qui dépassent la phrase sont remplies avec <PAD> afin que
 tous les contextes aient une taille constante.
 """
 
-from vocabulary import TOKEN_MASK, TOKEN_PAD, tokens_vers_indices
+from vocabulary import TOKEN_MASK, TOKEN_PAD, TOKEN_UNK, tokens_vers_indices
 
 
 def construire_contexte(
@@ -113,7 +113,10 @@ def convertir_exemples_en_indices(
         exemples_indices.append(
             {
                 "contexte": tokens_vers_indices(contexte, mot_vers_indice),
-                "cible": mot_vers_indice[cible],
+                "cible": mot_vers_indice.get(
+                    cible,
+                    mot_vers_indice.get(TOKEN_UNK, 0),
+                ),
                 "phrase_masquee": tokens_vers_indices(
                     phrase_masquee, mot_vers_indice
                 ),
@@ -131,3 +134,7 @@ if __name__ == "__main__":
     ctx = construire_contexte(phrase_test, position_cible=3, fenetre_avant=3, fenetre_apres=1)
     print("Cible : 'dort' (position 3)")
     print("Contexte avec 3 avant et 1 après :", ctx)
+    
+    # Convertir l'exemple en indice(chauqe mot -> index)
+    # cts = convertir_exemples_en_indices(generer_exemples(phrase_test, fenetre_avant=3, fenetre_apres=1,taille_fenetre=5),phrase_test)
+    # print("convertir l'exemple en index :", cts)

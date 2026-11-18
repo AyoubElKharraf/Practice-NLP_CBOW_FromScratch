@@ -33,7 +33,9 @@ from vocabulary import (
     construire_vocabulaire, 
     tokens_vers_indices, 
     indices_vers_tokens,
-    TOKEN_MASK
+    TOKEN_MASK,
+    TOKEN_PAD,
+    TOKEN_UNK,
 )
 
 def afficher_separateur(titre: str):
@@ -85,7 +87,11 @@ def main():
     # 3. Construction du Vocabulaire
     # -------------------------------------------------------------
     afficher_separateur("3. CONSTRUCTION DU VOCABULAIRE ET DES MAPPINGS")
-    mot_vers_indice, indice_vers_mot = construire_vocabulaire(corpus_tokenise, inclure_speciaux=True)
+    mot_vers_indice, indice_vers_mot = construire_vocabulaire(
+        corpus_tokenise,
+        inclure_speciaux=True,
+        min_count=3,
+    )
     V = len(mot_vers_indice)
     print(f"Taille du vocabulaire unique (V) : {V} mots (incluant tokens spéciaux)")
 
@@ -183,6 +189,18 @@ def main():
 
     print("[Premier exemple converti en indices] :")
     print(f"  {exemples_indices[0]}")
+    nb_cibles_unk = sum(
+        exemple["cible"] == mot_vers_indice[TOKEN_UNK]
+        for exemple in exemples_indices
+    )
+    exemples_indices = [
+        exemple for exemple in exemples_indices
+        if exemple["cible"] != mot_vers_indice[TOKEN_UNK]
+    ]
+    print(
+        f"Exemples rares remplacés par {TOKEN_UNK} ignorés à l'entraînement : "
+        f"{nb_cibles_unk}"
+    )
 
     # -------------------------------------------------------------
     # 6. Étape 3 : Embeddings et Modèle CBOW / MiniBERT
@@ -192,7 +210,11 @@ def main():
     modele = ModeleCBOW(
         taille_vocabulaire=V,
         dimension_embedding=d,
-        indice_pad=mot_vers_indice["<PAD>"]
+        indice_pad=mot_vers_indice[TOKEN_PAD],
+        taille_contexte=fenetre_avant + fenetre_apres,
+        dimension_cachee=128,
+        taux_dropout=0.3,
+        indice_unk=mot_vers_indice[TOKEN_UNK],
     )
 
     print("Modèle initialisé avec succès :")
@@ -240,13 +262,30 @@ def main():
     if epochs < 1:
         epochs = 5
     print(f"Entraînement sur {len(exemples_indices)} exemples pendant {epochs} epoch(s).")
-    entrainer_modele(modele, exemples_indices, epochs=epochs, taux_apprentissage=0.05)
+    entrainer_modele(
+        modele,
+        exemples_indices,
+        epochs=epochs,
+        taux_apprentissage=0.001,
+        exemples_validation=exemples_test_indices,
+        patience=3,
+    )
 
     # -------------------------------------------------------------
     # 8. Étape 5 : évaluation et prédiction interactive
     # -------------------------------------------------------------
     afficher_separateur("8. ÉTAPE 5 : ÉVALUATION ET PRÉDICTION")
-    precisions = evaluer_modele(modele, exemples_test_indices, k=5)
+    precisions = evaluer_modele(
+        modele,
+        exemples_test_indices,
+        k=5,
+        indice_unk=mot_vers_indice[TOKEN_UNK],
+        indices_a_ignorer={
+            mot_vers_indice[TOKEN_PAD],
+            mot_vers_indice[TOKEN_UNK],
+            mot_vers_indice[TOKEN_MASK],
+        },
+    )
     print(f"Accuracy Top-1 : {precisions['accuracy_top1'] * 100:.2f} %")
     print(f"Accuracy Top-5 : {precisions['accuracy_top5'] * 100:.2f} %")
     print("\nLa phrase d'évaluation est distincte de celles utilisées pour l'entraînement.")

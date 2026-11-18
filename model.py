@@ -41,11 +41,20 @@ class ModeleCBOW:
     def __init__(
         self,
         taille_vocabulaire: int,
-        dimension_embedding: int = 64,
-        indice_pad: int = 0
+        dimension_embedding: int = 32,
+        indice_pad: int = 0,
+        taille_contexte: int = 4,
+        dimension_cachee: int = 128,
+        taux_dropout: float = 0.3,
+        indice_unk: int = 1,
     ):
         self.V = taille_vocabulaire
         self.d = dimension_embedding
+        self.taille_contexte = taille_contexte
+        self.dimension_cachee = dimension_cachee
+        self.taux_dropout = taux_dropout
+        self.indice_unk = indice_unk
+        self.dimension_concatenee = taille_contexte * dimension_embedding
 
         # 1. Couche d'embedding
         self.couche_embedding = CoucheEmbedding(
@@ -54,10 +63,22 @@ class ModeleCBOW:
             indice_pad=indice_pad
         )
 
-        # 2. Poids de la couche de projection de sortie (W_sortie : d x V)
-        # Initialisation uniforme de Xavier
-        limite = 1.0 / np.sqrt(self.d)
-        self.W_sortie = np.random.uniform(-limite, limite, (self.d, self.V))
+        # 2. Couche cachée ReLU : (K × d) → dimension_cachee
+        limite_hidden = 1.0 / np.sqrt(self.dimension_concatenee)
+        self.W_hidden = np.random.uniform(
+            -limite_hidden,
+            limite_hidden,
+            (self.dimension_concatenee, self.dimension_cachee),
+        )
+        self.b_hidden = np.zeros(self.dimension_cachee)
+
+        # 3. Couche de projection vers le vocabulaire
+        limite_sortie = 1.0 / np.sqrt(self.dimension_cachee)
+        self.W_sortie = np.random.uniform(
+            -limite_sortie,
+            limite_sortie,
+            (self.dimension_cachee, self.V),
+        )
 
         # Biais de sortie (taille V), initialisé à zéro
         self.b_sortie = np.zeros(self.V)
@@ -80,7 +101,8 @@ class ModeleCBOW:
     def forward(
         self,
         indices_contexte: list[int],
-        mode_agregation: str = "moyenne"
+        mode_agregation: str = "concat",
+        entrainement: bool = False,
     ) -> dict[str, np.ndarray]:
         """
         Effectue la passe avant (Forward Pass) pour un exemple de contexte.
@@ -95,21 +117,46 @@ class ModeleCBOW:
                 - 'scores'           : z (forme V,)
                 - 'probabilites'     : p (forme V,)
         """
-        # 1. Agrégation des embeddings des mots du contexte -> h (dimension d)
+        if len(indices_contexte) != self.taille_contexte:
+            raise ValueError(
+                f"La taille du contexte doit être {self.taille_contexte}, "
+                f"mais {len(indices_contexte)} indices ont été fournis."
+            )
+
+        # 1. Concaténation des embeddings dans l'ordre du contexte
         h = self.couche_embedding.agreger_contexte(
             indices_contexte,
             mode=mode_agregation
         )
 
-        # 2. Projection linéaire vers l'espace du vocabulaire -> z (dimension V)
-        # z = h @ W_sortie + b_sortie
-        scores = np.dot(h, self.W_sortie) + self.b_sortie
+        if h.shape[0] != self.dimension_concatenee:
+            raise ValueError("La dimension concaténée du contexte ne correspond pas au modèle.")
 
-        # 3. Normalisation en probabilités via Softmax -> p (dimension V)
+        # 2. Couche cachée ReLU
+        scores_hidden = h @ self.W_hidden + self.b_hidden
+        activations_hidden = np.maximum(0.0, scores_hidden)
+
+        # 3. Dropout pendant l'entraînement uniquement
+        masque_dropout = None
+        activations_reglees = activations_hidden
+        if entrainement and self.taux_dropout > 0:
+            masque_dropout = (
+                np.random.rand(self.dimension_cachee) >= self.taux_dropout
+            ).astype(np.float64)
+            activations_reglees = (
+                activations_hidden * masque_dropout
+            ) / (1.0 - self.taux_dropout)
+
+        # 4. Projection vers le vocabulaire puis Softmax
+        scores = np.dot(activations_reglees, self.W_sortie) + self.b_sortie
         probabilites = self.softmax(scores)
 
         return {
             "vecteur_contexte": h,
+            "scores_hidden": scores_hidden,
+            "activations_hidden": activations_hidden,
+            "masque_dropout": masque_dropout,
+            "activations_reglees": activations_reglees,
             "scores": scores,
             "probabilites": probabilites
         }

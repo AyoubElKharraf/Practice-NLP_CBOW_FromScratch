@@ -82,6 +82,8 @@ def evaluer_modele(
     modele: ModeleCBOW,
     exemples: list[dict[str, list[int] | int]],
     k: int = 5,
+    indice_unk: int | None = None,
+    indices_a_ignorer: set[int] | None = None,
 ) -> dict[str, float]:
     """Calcule les accuracies Top-1 et Top-k sur des exemples encodés."""
     if not exemples:
@@ -91,18 +93,32 @@ def evaluer_modele(
 
     bonnes_top_1 = 0
     bonnes_top_k = 0
+    nombre_evalue = 0
+    indices_a_ignorer = indices_a_ignorer or set()
 
     for exemple in exemples:
-        probabilites = modele.forward(exemple["contexte"])["probabilites"]
-        meilleurs_indices = np.argsort(probabilites)[::-1][:k]
         cible = exemple["cible"]
+        if indice_unk is not None and cible == indice_unk:
+            continue
 
+        probabilites = modele.forward(exemple["contexte"])["probabilites"]
+        candidats = [
+            indice for indice in np.argsort(probabilites)[::-1]
+            if int(indice) not in indices_a_ignorer
+        ]
+        meilleurs_indices = candidats[:k]
+        if not meilleurs_indices:
+            continue
+
+        nombre_evalue += 1
         if meilleurs_indices[0] == cible:
             bonnes_top_1 += 1
         if cible in meilleurs_indices:
             bonnes_top_k += 1
 
-    nombre_exemples = len(exemples)
+    nombre_exemples = nombre_evalue
+    if nombre_exemples == 0:
+        raise ValueError("Aucun exemple valide à évaluer après filtrage des <UNK>.")
     return {
         "accuracy_top1": bonnes_top_1 / nombre_exemples,
         f"accuracy_top{k}": bonnes_top_k / nombre_exemples,

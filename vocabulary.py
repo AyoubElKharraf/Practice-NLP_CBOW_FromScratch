@@ -9,6 +9,7 @@ Rôle : Création du vocabulaire unique et gestion des correspondances mots <-> 
 """
 
 from typing import Iterable
+from collections import Counter
 
 TOKEN_PAD = "<PAD>" # Token de remplissage pour les séquences de longueur variable (padding).
 TOKEN_UNK = "<UNK>" # Token pour les mots inconnus (hors vocabulaire).
@@ -24,7 +25,11 @@ def extraire_vocabulaire_unique(corpus_tokenise: list[list[str]]) -> list[str]:
         vocabulaire.update(phrase_tokens)
     return sorted(list(vocabulaire))
 
-def construire_vocabulaire(corpus_tokenise: list[list[str]], inclure_speciaux: bool = True) -> tuple[dict[str, int], dict[int, str]]:
+def construire_vocabulaire(
+    corpus_tokenise: list[list[str]],
+    inclure_speciaux: bool = True,
+    min_count: int = 1,
+) -> tuple[dict[str, int], dict[int, str]]:
     """
     Construit les dictionnaires de correspondance mot <-> indice.
     Paramètres :
@@ -33,7 +38,15 @@ def construire_vocabulaire(corpus_tokenise: list[list[str]], inclure_speciaux: b
     Retourne :
         (mot_vers_indice, indice_vers_mot)
     """
-    mots_uniques = extraire_vocabulaire_unique(corpus_tokenise)
+    if min_count < 1:
+        raise ValueError("min_count doit être supérieur ou égal à 1.")
+
+    frequences = Counter(
+        mot for phrase in corpus_tokenise for mot in phrase
+    )
+    mots_uniques = sorted(
+        mot for mot, nombre in frequences.items() if nombre >= min_count
+    )
     
     mot_vers_indice = {}
     indice_vers_mot = {}

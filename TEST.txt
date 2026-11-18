@@ -1,0 +1,34 @@
+#################################
+####### Exemples : Extèrieur
+#################################
+```text
+Le professeur descendit dans le <MASK> avec son neveu.
+Ils observèrent la lumière au fond du <MASK>.
+Le voyageur prit son <MASK> avant de partir.
+La mer était calme et le <MASK> avançait lentement.
+Le savant examina attentivement la <MASK> étrange.
+```
+1.« Le professeur descendit dans le cabinet avec son neveu. »
+2.« Ils observèrent la lumière au fond du tunnel. »
+3.« Le voyageur prit son sac avant de partir. »
+4.« La mer était calme et le navire avançait lentement. »
+5.« Le savant examina attentivement la roche étrange. »
+
+#################################
+####### Exemples : Intèrieur
+#################################
+
+```text
+Représentez-vous un homme grand, maigre, d'une <MASK> de fer, et d'un blond juvénile qui lui ôtait dix bonnes années de sa cinquantaine.
+Mon oncle seul occupait ma pensée.  Il était enfoui dans son large <MASK> garni de velours d'Utrecht, et tenait entre les mains un livre qu'il considérait avec la plus profonde admiration.
+Marthe s'enfuit; je volai sur ses pas, et, sans savoir comment, je me trouvai assis à ma place <MASK> dans la salle à manger.
+Maintenant, je vais te dicter chaque <MASK> de notre alphabet qui correspond à l'un de ces caractères islandais.
+Je n'avais pas achevé ma phrase que le professeur poussait un cri, mieux qu'un cri, un véritable rugissement!  Une révélation venait de se faire, dans son <MASK>.
+
+```
+
+1.Représentez-vous un homme grand, maigre, d'une *santé* de fer, et d'un blond juvénile qui lui ôtait dix bonnes années de sa cinquantaine.
+2.Mon oncle seul occupait ma pensée.  Il était enfoui dans son large *fauteuil* garni de velours d'Utrecht, et tenait entre les mains un livre qu'il considérait avec la plus profonde admiration.
+3.Marthe s'enfuit; je volai sur ses pas, et, sans savoir comment, je me trouvai assis à ma place *habituelle* dans la salle à manger.
+4.Maintenant, je vais te dicter chaque *lettre* de notre alphabet qui correspond à l'un de ces caractères islandais.
+5.Je n'avais pas achevé ma phrase que le professeur poussait un cri, mieux qu'un cri, un véritable rugissement!  Une révélation venait de se faire, dans son *esprit*.

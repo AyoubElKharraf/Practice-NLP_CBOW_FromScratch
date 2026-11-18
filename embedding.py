@@ -78,28 +78,34 @@ class CoucheEmbedding:
         Retourne :
             vecteur_contexte (np.ndarray) : Vecteur agrégé de dimension (d,).
         """
+        if mode == "concat":
+            vecteurs = np.array(
+                [
+                    np.zeros(self.d) if idx == self.indice_pad else self.obtenir_vecteur(idx)
+                    for idx in indices_contexte
+                ]
+            )
+            return vecteurs.reshape(-1)
+
         if ignorer_pad:
-            # On conserve uniquement les tokens utiles (non PAD)
             indices_actifs = [idx for idx in indices_contexte if idx != self.indice_pad]
         else:
             indices_actifs = indices_contexte
 
-        # Si tous les mots étaient du PAD (ex. phrase vide), on retourne un vecteur nul
         if not indices_actifs:
             return np.zeros(self.d)
 
-        # Récupération des vecteurs des mots du contexte (taille : K x d)
         vecteurs = self.obtenir_vecteurs(indices_actifs)
 
         if mode == "moyenne":
-            # Moyenne le long de l'axe des mots (axe 0) -> résultat de taille (d,)
-            vecteur_contexte = np.mean(vecteurs, axis=0)
-        elif mode == "somme":
-            vecteur_contexte = np.sum(vecteurs, axis=0)
-        else:
-            raise ValueError(f"Mode d'agrégation inconnu : '{mode}'. Choisir 'moyenne' ou 'somme'.")
+            return np.mean(vecteurs, axis=0)
+        if mode == "somme":
+            return np.sum(vecteurs, axis=0)
 
-        return vecteur_contexte
+        raise ValueError(
+            f"Mode d'agrégation inconnu : '{mode}'. "
+            "Choisir 'moyenne', 'somme' ou 'concat'."
+        )
 
 
 if __name__ == "__main__":
